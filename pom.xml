@@ -6,7 +6,7 @@
     <parent>
         <artifactId>spring-boot-starter-parent</artifactId>
         <groupId>org.springframework.boot</groupId>
-        <version>3.4.2</version>
+        <version>3.1.5</version>
     </parent>
     <groupId>com.sky</groupId>
     <artifactId>sky-take-out</artifactId>
@@ -25,7 +25,8 @@
         <druid>1.2.1</druid>
         <pagehelper>2.1.0</pagehelper>
         <aliyun.sdk.oss>3.17.4</aliyun.sdk.oss>
-        <knife4j>3.0.2</knife4j>
+        <knife4j>4.3.0</knife4j>
+        <springdoc.version>2.3.0</springdoc.version>
         <aspectj>1.9.4</aspectj>
         <jjwt>0.9.1</jjwt>
         <jaxb-api>2.3.1</jaxb-api>
@@ -72,8 +73,14 @@
 
             <dependency>
                 <groupId>com.github.xiaoymin</groupId>
-                <artifactId>knife4j-spring-boot-starter</artifactId>
+                <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
                 <version>${knife4j}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
             </dependency>
 
             <dependency>

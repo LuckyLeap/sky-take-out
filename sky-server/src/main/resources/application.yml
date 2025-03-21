@@ -6,12 +6,15 @@ spring:
     active: dev
   main:
     allow-circular-references: true
+  # 配置数据库的连接信息
   datasource:
-    druid:
-      driver-class-name: ${sky.datasource.driver-class-name}
-      url: jdbc:mysql://${sky.datasource.host}:${sky.datasource.port}/${sky.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
-      username: ${sky.datasource.username}
-      password: ${sky.datasource.password}
+    url: jdbc:mysql://localhost:3306/sky_take_out?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: "2214"
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
 
 mybatis:
   #mapper配置文件
@@ -37,3 +40,11 @@ sky:
     admin-ttl: 7200000
     # 设置前端传递过来的令牌名称
     admin-token-name: token
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html  # Swagger UI 访问路径
+    enabled: true           # 启用 Swagger UI
+  api-docs:
+    path: /v3/api-docs      # OpenAPI JSON 访问路径
+    enabled: true           # 启用 OpenAPI JSON
