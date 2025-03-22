@@ -2,12 +2,16 @@ package com.sky.service.impl;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import com.sky.constant.MessageConstant;
+import com.sky.constant.StatusConstant;
 import com.sky.dto.DishDTO;
 import com.sky.dto.DishPageQueryDTO;
 import com.sky.entity.Dish;
 import com.sky.entity.DishFlavor;
+import com.sky.exception.DeletionNotAllowedException;
 import com.sky.mapper.DishFlavorMapper;
 import com.sky.mapper.DishMapper;
+import com.sky.mapper.SetmealDishMapper;
 import com.sky.result.PageResult;
 import com.sky.service.DishService;
 import com.sky.vo.DishVO;
@@ -18,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -27,6 +32,8 @@ public class DishServiceImpl implements DishService {
     private DishMapper dishMapper;
     @Autowired
     private DishFlavorMapper dishFlavorMapper;
+    @Autowired
+    private SetmealDishMapper setmealDishMapper;
 
     /**
      * 新增菜品及口味
@@ -60,5 +67,31 @@ public class DishServiceImpl implements DishService {
         //2. 封装分页结果
         Page<DishVO> p = (Page<DishVO>)dishList;
         return new PageResult<>(p.getTotal(), p.getResult());
+    }
+
+    /**
+     * 批量删除菜品
+     */
+    @Transactional
+    public void deleteBatch(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new IllegalArgumentException("菜品ID列表不能为空");
+        }
+        List<Long> setmealIds = setmealDishMapper.getSetmealIdsByDishIds(ids);
+        if (setmealIds != null && !setmealIds.isEmpty()){
+            // 当前菜品关联了套餐,不能删除
+            throw new DeletionNotAllowedException(MessageConstant.DISH_BE_RELATED_BY_SETMEAL);
+        }
+
+        for (Long id : ids) {
+            Dish dish = dishMapper.getById(id);
+            // 如果菜品状态为起售状态，则不能删除
+            if (Objects.equals(dish.getStatus(), StatusConstant.ENABLE)){
+                throw new DeletionNotAllowedException(MessageConstant.DISH_ON_SALE);
+            }
+            // 删除菜品数据
+            dishMapper.deleteById(id);
+            dishFlavorMapper.deleteByDishId(id);
+        }
     }
 }
