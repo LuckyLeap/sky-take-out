@@ -7,6 +7,7 @@ import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.sky.interceptor.JwtTokenAdminInterceptor;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,9 +58,10 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("苍穹外卖项目接口文档")  // 文档标题
-                        .version("2.0")              // 文档版本
-                        .description("苍穹外卖项目接口文档")); // 文档描述
+                        .title("苍穹外卖项目接口文档")          // 文档标题
+                        .contact(new Contact().name("鸆灏")) //作者
+                        .version("2.0")                     // 文档版本
+                        .description("苍穹外卖项目接口文档"));  // 文档描述
     }
 
     /**

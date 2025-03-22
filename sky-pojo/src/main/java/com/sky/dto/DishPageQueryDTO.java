@@ -7,9 +7,9 @@ import java.io.Serializable;
 @Data
 public class DishPageQueryDTO implements Serializable {
 
-    private int page;
+    private Integer page = 1;
 
-    private int pageSize;
+    private Integer pageSize = 10;
 
     private String name;
 

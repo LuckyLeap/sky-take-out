@@ -1,5 +1,6 @@
 package com.sky.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.sky.entity.DishFlavor;
 import lombok.Data;
 import java.io.Serializable;
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DishDTO implements Serializable {
 
     private Long id;
