@@ -2,6 +2,7 @@ package com.sky.handler;
 
 import com.sky.constant.MessageConstant;
 import com.sky.exception.BaseException;
+import com.sky.exception.DeletionNotAllowedException;
 import com.sky.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.formula.functions.T;
@@ -40,5 +41,21 @@ public class GlobalExceptionHandler {
         }else {
             return Result.error(MessageConstant.UNKNOWN_ERROR);
         }
+    }
+
+    /**
+     * 处理参数异常
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public Result<String> handleIllegalArgumentException(IllegalArgumentException e) {
+        return Result.error(e.getMessage());
+    }
+
+    /**
+     * 处理关联关系异常
+     */
+    @ExceptionHandler(DeletionNotAllowedException.class)
+    public Result<String> handleDeletionNotAllowedException(DeletionNotAllowedException e) {
+        return Result.error(e.getMessage());
     }
 }

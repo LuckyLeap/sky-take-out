@@ -2,6 +2,7 @@ package com.sky.controller.admin;
 
 import com.sky.dto.DishDTO;
 import com.sky.dto.DishPageQueryDTO;
+import com.sky.entity.Dish;
 import com.sky.result.PageResult;
 import com.sky.result.Result;
 import com.sky.service.DishService;
@@ -57,5 +58,49 @@ public class DishController {
         log.info("批量删除菜品，ids:{}", ids);
         dishService.deleteBatch(ids);
         return Result.success();
+    }
+
+    /**
+     * 根据id查询菜品及口味
+     */
+    @GetMapping("/{id}")
+    @Operation(summary = "根据id查询菜品", description = "根据id查询菜品")
+    public Result<DishVO> getById(@PathVariable Long id){
+        log.info("根据id查询菜品信息：{}", id);
+        DishVO dishVO = dishService.getByIdWithFlavor(id);
+        return Result.success(dishVO);
+    }
+
+    /**
+     * 修改菜品信息
+     */
+    @PutMapping
+    @Operation(summary = "修改菜品", description = "修改菜品信息")
+    public Result<String> update(@RequestBody DishDTO dishDTO){
+        log.info("修改菜品：{}", dishDTO);
+        dishService.updateWithFlavor(dishDTO);
+        return Result.success();
+    }
+
+    /**
+     * 菜品起售停售
+     */
+    @PostMapping("/status/{status}")
+    @Operation(summary = "菜品起售停售", description = "菜品起售停售")
+    public Result<String> startOrStop(@PathVariable Integer status, Long id) {
+        log.info("菜品起售停售：{}", id);
+        dishService.startOrStop(status, id);
+        return Result.success();
+    }
+
+    /**
+     * 根据分类id查询菜品
+     */
+    @GetMapping("/list")
+    @Operation(summary = "根据分类id查询菜品", description = "根据分类id查询菜品")
+    public Result<List<Dish>> list(Long categoryId){
+        log.info("根据分类id查询菜品：{}", categoryId);
+        List<Dish> list = dishService.list(categoryId);
+        return Result.success(list);
     }
 }
