@@ -67,11 +67,30 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
     /**
      * 配置控制器扫描范围
      */
+    //总接口
     @Bean
-    public GroupedOpenApi allApis() {
+    public GroupedOpenApi Apis() {
         return GroupedOpenApi.builder()
-                .group("all")                   // 分组名称
-                .packagesToScan("com.sky.controller")  // 扫描控制器包
+                .group("all")
+                .packagesToScan("com.sky.controller")
+                .build();
+    }
+
+    // 管理端接口分组
+    @Bean
+    public GroupedOpenApi adminApi() {
+        return GroupedOpenApi.builder()
+                .group("管理端接口")
+                .packagesToScan("com.sky.controller.admin")
+                .build();
+    }
+
+    // 用户端接口分组
+    @Bean
+    public GroupedOpenApi userApi() {
+        return GroupedOpenApi.builder()
+                .group("用户端接口")
+                .packagesToScan("com.sky.controller.user")
                 .build();
     }
 
