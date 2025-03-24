@@ -24,10 +24,7 @@ import java.math.BigDecimal;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.List;
+import java.util.*;
 
 /**
  * 微信支付工具类
@@ -46,26 +43,23 @@ public class WeChatPayUtil {
 
     /**
      * 获取调用微信接口的客户端工具对象
-     *
-     * @return
      */
     private CloseableHttpClient getClient() {
         PrivateKey merchantPrivateKey = null;
         try {
             //merchantPrivateKey商户API私钥，如何加载商户API私钥请看常见问题
-            merchantPrivateKey = PemUtil.loadPrivateKey(new FileInputStream(new File(weChatProperties.getPrivateKeyFilePath())));
+            merchantPrivateKey = PemUtil.loadPrivateKey(new FileInputStream(weChatProperties.getPrivateKeyFilePath()));
             //加载平台证书文件
-            X509Certificate x509Certificate = PemUtil.loadCertificate(new FileInputStream(new File(weChatProperties.getWeChatPayCertFilePath())));
+            X509Certificate x509Certificate = PemUtil.loadCertificate(new FileInputStream(weChatProperties.getWeChatPayCertFilePath()));
             //wechatPayCertificates微信支付平台证书列表。你也可以使用后面章节提到的“定时更新平台证书功能”，而不需要关心平台证书的来龙去脉
-            List<X509Certificate> wechatPayCertificates = Arrays.asList(x509Certificate);
+            List<X509Certificate> wechatPayCertificates = Collections.singletonList(x509Certificate);
 
             WechatPayHttpClientBuilder builder = WechatPayHttpClientBuilder.create()
                     .withMerchant(weChatProperties.getMchid(), weChatProperties.getMchSerialNo(), merchantPrivateKey)
                     .withWechatPay(wechatPayCertificates);
 
             // 通过WechatPayHttpClientBuilder构造的HttpClient，会自动的处理签名和验签
-            CloseableHttpClient httpClient = builder.build();
-            return httpClient;
+            return builder.build();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             return null;
@@ -74,10 +68,6 @@ public class WeChatPayUtil {
 
     /**
      * 发送post方式请求
-     *
-     * @param url
-     * @param body
-     * @return
      */
     private String post(String url, String body) throws Exception {
         CloseableHttpClient httpClient = getClient();
@@ -90,8 +80,7 @@ public class WeChatPayUtil {
 
         CloseableHttpResponse response = httpClient.execute(httpPost);
         try {
-            String bodyAsString = EntityUtils.toString(response.getEntity());
-            return bodyAsString;
+            return EntityUtils.toString(response.getEntity());
         } finally {
             httpClient.close();
             response.close();
@@ -100,9 +89,6 @@ public class WeChatPayUtil {
 
     /**
      * 发送get方式请求
-     *
-     * @param url
-     * @return
      */
     private String get(String url) throws Exception {
         CloseableHttpClient httpClient = getClient();
@@ -114,8 +100,7 @@ public class WeChatPayUtil {
 
         CloseableHttpResponse response = httpClient.execute(httpGet);
         try {
-            String bodyAsString = EntityUtils.toString(response.getEntity());
-            return bodyAsString;
+            return EntityUtils.toString(response.getEntity());
         } finally {
             httpClient.close();
             response.close();
@@ -124,12 +109,6 @@ public class WeChatPayUtil {
 
     /**
      * jsapi下单
-     *
-     * @param orderNum    商户订单号
-     * @param total       总金额
-     * @param description 商品描述
-     * @param openid      微信用户的openid
-     * @return
      */
     private String jsapi(String orderNum, BigDecimal total, String description, String openid) throws Exception {
         JSONObject jsonObject = new JSONObject();
@@ -156,12 +135,10 @@ public class WeChatPayUtil {
 
     /**
      * 小程序支付
-     *
      * @param orderNum    商户订单号
      * @param total       金额，单位 元
      * @param description 商品描述
      * @param openid      微信用户的openid
-     * @return
      */
     public JSONObject pay(String orderNum, BigDecimal total, String description, String openid) throws Exception {
         //统一下单，生成预支付交易单
@@ -207,12 +184,10 @@ public class WeChatPayUtil {
 
     /**
      * 申请退款
-     *
      * @param outTradeNo    商户订单号
      * @param outRefundNo   商户退款单号
      * @param refund        退款金额
      * @param total         原订单金额
-     * @return
      */
     public String refund(String outTradeNo, String outRefundNo, BigDecimal refund, BigDecimal total) throws Exception {
         JSONObject jsonObject = new JSONObject();

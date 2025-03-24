@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 处理参数异常
+     * 处理参数异常【捕获IllegalArgumentException（空字串）异常】
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public Result<String> handleIllegalArgumentException(IllegalArgumentException e) {

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.sky.interceptor.JwtTokenAdminInterceptor;
+import com.sky.interceptor.JwtTokenUserInterceptor;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
@@ -33,6 +34,8 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
 
     @Autowired
     private JwtTokenAdminInterceptor jwtTokenAdminInterceptor;
+    @Autowired
+    private JwtTokenUserInterceptor jwtTokenUserInterceptor;
 
     /**
      * 注册自定义拦截器
@@ -48,6 +51,14 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
                         "/doc.html",             // 排除 Knife4j 的文档页面
                         "/webjars/**",           // 排除 Knife4j 的静态资源
                         "/swagger-ui/**"         // 排除 Swagger UI 路径
+                );
+        registry.addInterceptor(jwtTokenUserInterceptor)
+                .addPathPatterns("/user/**")
+                .excludePathPatterns(
+                        "/user/user/login",
+                        "/user/shop/status",
+                        "/v3/api-docs/**",       // 排除 SpringDoc 的 OpenAPI JSON 路径
+                        "/doc.html"           // 排除 Knife4j的文档页面
                 );
     }
 

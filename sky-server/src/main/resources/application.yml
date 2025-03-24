@@ -38,17 +38,28 @@ logging:
 
 sky:
   jwt:
-    # 设置jwt签名加密时使用的秘钥
-    admin-secret-key: itcast
-    # 设置jwt过期时间
+    # 管理端员工生成jwt令牌相关配置
+      # 设置jwt签名加密时使用的秘钥
+    admin-secret-key: eden
+      # 设置jwt过期时间
     admin-ttl: 720000000
-    # 设置前端传递过来的令牌名称
+      # 设置前端传递过来的令牌名称
     admin-token-name: token
+    # 用户端微信用户生成jwt令牌相关配置
+    user-secret-key: admin
+    user-ttl: 720000000
+    user-token-name: authentication
+
   # 阿里云OSS配置
   alioss:
     endpoint: https://oss-cn-beijing.aliyuncs.com
     bucketName: management-sky-take-out
     region: cn-beijing
+
+  # 配置微信小程序
+  wechat:
+    appid: wx7ec0b16178bb6e85
+    secret: 2193b78ece7bdd8b6259169c817cbf9a
 
 # 配置Swagger
 springdoc:
