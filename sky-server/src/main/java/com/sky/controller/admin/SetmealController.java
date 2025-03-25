@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,6 +32,7 @@ public class SetmealController {
      */
     @PostMapping
     @Operation(summary = "新增套餐", description = "新增套餐")
+    @CacheEvict(cacheNames = "setmealCache", key = "#setmealDTO.categoryId")
     public Result<String> save(@RequestBody SetmealDTO setmealDTO) {
         log.info("新增套餐:{}", setmealDTO);
         setmealService.saveWithDish(setmealDTO);
@@ -53,6 +55,7 @@ public class SetmealController {
      */
     @DeleteMapping
     @Operation(summary = "批量删除套餐", description = "批量删除套餐")
+    @CacheEvict(cacheNames = "setmealCache", allEntries = true)
     public Result<String> delete(@RequestParam List<Long> ids){
         if (ids == null || ids.isEmpty()){
             throw new IllegalArgumentException("菜品ID列表不能为空");
@@ -78,6 +81,7 @@ public class SetmealController {
      */
     @PutMapping
     @Operation(summary = "修改套餐", description = "修改套餐")
+    @CacheEvict(cacheNames = "setmealCache", allEntries = true)
     public Result<String> update(@RequestBody SetmealDTO setmealDTO) {
         if (setmealDTO == null || setmealDTO.getId() == null || setmealDTO.getSetmealDishes() == null) {
             throw new IllegalArgumentException("参数不能为空：setmealDTO、id 或 setmealDishes");
@@ -92,6 +96,7 @@ public class SetmealController {
      */
     @PostMapping("/status/{status}")
     @Operation(summary = "套餐起售停售", description = "套餐起售停售")
+    @CacheEvict(cacheNames = "setmealCache", allEntries = true)
     public Result<String> startOrStop(@PathVariable Integer status, Long ids) {
         log.info("套餐起售停售:{},{}", status, ids);
         setmealService.startOrStop(status, ids);
