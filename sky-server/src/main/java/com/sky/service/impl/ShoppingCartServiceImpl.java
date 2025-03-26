@@ -71,4 +71,68 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
             shoppingCartMapper.insert(shoppingCart);
         }
     }
+
+    /**
+     * 查看购物车
+     */
+    public List<ShoppingCart> showShoppingCart() {
+        // 获取当前用户ID
+        Long userId = BaseContext.getCurrentId();
+        ShoppingCart shoppingCart = ShoppingCart.builder().userId(userId).build();
+        return shoppingCartMapper.list(shoppingCart);
+    }
+
+    /**
+     * 清空购物车
+     */
+    public void cleanShoppingCart() {
+        // 获取当前用户ID
+        Long userId = BaseContext.getCurrentId();
+
+        // 检查用户ID是否为空
+        if (userId == null) {
+            log.warn("清空购物车失败：当前用户ID为空，可能是未登录用户");
+            return; // 如果不允许匿名用户清空购物车，直接返回
+        }
+
+        try {
+            // 调用数据库删除操作
+            shoppingCartMapper.deleteByUserId(userId);
+
+            // 记录成功日志
+            log.info("清空购物车成功，用户ID: {}", userId);
+        } catch (Exception e) {
+            // 记录异常日志
+            log.error("清空购物车失败，用户ID: {}, 错误信息: {}", userId, e.getMessage(), e);
+
+            // 根据业务需求决定是否重新抛出异常
+            throw new RuntimeException("清空购物车失败，请稍后再试", e);
+        }
+    }
+
+    /**
+     * 删除购物车中一个商品
+     */
+    public void subShoppingCart(ShoppingCartDTO shoppingCartDTO) {
+        ShoppingCart shoppingCart = new ShoppingCart();
+        BeanUtils.copyProperties(shoppingCartDTO,shoppingCart);
+        //设置查询条件，查询当前登录用户的购物车数据
+        shoppingCart.setUserId(BaseContext.getCurrentId());
+
+        List<ShoppingCart> list = shoppingCartMapper.list(shoppingCart);
+
+        if(list != null && !list.isEmpty()){
+            shoppingCart = list.get(0);
+
+            Integer number = shoppingCart.getNumber();
+            if(number == 1){
+                //当前商品在购物车中的份数为1，直接删除当前记录
+                shoppingCartMapper.deleteById(shoppingCart.getId());
+            }else {
+                //当前商品在购物车中的份数不为1，修改份数即可
+                shoppingCart.setNumber(shoppingCart.getNumber() - 1);
+                shoppingCartMapper.updateNumberById(shoppingCart);
+            }
+        }
+    }
 }

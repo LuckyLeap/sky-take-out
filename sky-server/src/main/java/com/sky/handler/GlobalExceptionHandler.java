@@ -58,4 +58,12 @@ public class GlobalExceptionHandler {
     public Result<String> handleDeletionNotAllowedException(DeletionNotAllowedException e) {
         return Result.error(e.getMessage());
     }
+
+    /**
+     * 处理运行时异常
+     */
+    @ExceptionHandler(RuntimeException.class)
+    public Result<String> handleRuntimeException(RuntimeException ex){
+        return Result.error(ex.getMessage());
+    }
 }
