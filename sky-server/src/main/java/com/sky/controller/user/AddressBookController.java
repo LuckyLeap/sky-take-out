@@ -77,7 +77,7 @@ public class AddressBookController {
     /**
      * 根据id删除地址
      */
-    @DeleteMapping
+    @DeleteMapping(value = { "", "/" })  // 允许匹配/user/addressBook和/user/addressBook/
     @Operation(summary = "根据id删除地址")
     public Result<String> deleteById(@RequestParam Long id) {
         if (id == null) {

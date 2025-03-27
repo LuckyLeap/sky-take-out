@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -17,8 +18,8 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController("userOrderController")
 @RequestMapping("/user/order")
-@Slf4j
 @Tag(name = "C端-订单接口")
+@Slf4j
 public class OrderController {
 
     @Autowired
@@ -29,7 +30,7 @@ public class OrderController {
      */
     @PostMapping("/submit")
     @Operation(summary = "用户下单", description = "用户下单")
-    public Result<OrderSubmitVO> submit(@RequestBody OrdersSubmitDTO ordersSubmitDTO) {
+    public Result<OrderSubmitVO> submit(@Validated @RequestBody OrdersSubmitDTO ordersSubmitDTO) {
         log.info("用户下单：{}", ordersSubmitDTO);
         OrderSubmitVO orderSubmitVO = orderService.submitOrder(ordersSubmitDTO);
         return Result.success(orderSubmitVO);
@@ -40,10 +41,17 @@ public class OrderController {
      */
     @PutMapping("/payment")
     @Operation(summary = "订单支付", description = "订单支付")
-    public Result<OrderPaymentVO> payment(@RequestBody OrdersPaymentDTO ordersPaymentDTO) throws Exception {
+    public Result<OrderPaymentVO> payment(@Validated @RequestBody OrdersPaymentDTO ordersPaymentDTO){
         log.info("订单支付：{}", ordersPaymentDTO);
-        OrderPaymentVO orderPaymentVO = orderService.payment(ordersPaymentDTO);
-        log.info("生成预支付交易单：{}", orderPaymentVO);
-        return Result.success(orderPaymentVO);
+        try {
+            OrderPaymentVO orderPaymentVO = orderService.payment(ordersPaymentDTO);
+            log.info("生成预支付交易单：{}", orderPaymentVO);
+            return Result.success(orderPaymentVO);
+        } catch (Exception e) {
+            // 记录异常日志
+            log.error("订单支付失败，参数：{}，异常信息：{}", ordersPaymentDTO, e.getMessage(), e);
+            // 返回友好的错误信息
+            return Result.error("订单支付失败，请稍后重试");
+        }
     }
 }

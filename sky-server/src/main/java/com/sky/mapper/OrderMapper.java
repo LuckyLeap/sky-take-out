@@ -21,4 +21,10 @@ public interface OrderMapper {
      * 修改订单信息
      */
     void update(Orders orders);
+
+    /**
+     * 根据订单号和用户id查询订单
+     */
+    @Select("select * from orders where number = #{orderNumber} and user_id = #{userId}")
+    Orders getByNumberAndUserId(String orderNumber, Long userId);
 }

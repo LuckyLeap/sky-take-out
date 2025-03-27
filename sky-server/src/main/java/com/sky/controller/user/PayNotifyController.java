@@ -84,6 +84,10 @@ public class PayNotifyController {
      * 数据解密
      */
     private String decryptData(String body) throws Exception {
+        if (body == null || body.trim().isEmpty()) {
+            throw new IllegalArgumentException("输入数据不能为空");
+        }
+
         JSONObject resultObject = JSON.parseObject(body);
         JSONObject resource = resultObject.getJSONObject("resource");
         String ciphertext = resource.getString("ciphertext");
@@ -91,8 +95,8 @@ public class PayNotifyController {
         String associatedData = resource.getString("associated_data");
 
         AesUtil aesUtil = new AesUtil(weChatProperties.getApiV3Key().getBytes(StandardCharsets.UTF_8));
-        //密文解密
 
+        //密文解密,返回明文
         return aesUtil.decryptToString(associatedData.getBytes(StandardCharsets.UTF_8),
                 nonce.getBytes(StandardCharsets.UTF_8),
                 ciphertext);

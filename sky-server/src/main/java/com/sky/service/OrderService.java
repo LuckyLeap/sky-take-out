@@ -13,9 +13,10 @@ public interface OrderService {
     /**
      * 订单支付
      */
-    OrderPaymentVO payment(OrdersPaymentDTO ordersPaymentDTO) throws Exception;
+    OrderPaymentVO payment(OrdersPaymentDTO ordersPaymentDTO);
 
     /**
+     * 支付成功，修改订单状态
      */
     void paySuccess(String outTradeNo);
 }
