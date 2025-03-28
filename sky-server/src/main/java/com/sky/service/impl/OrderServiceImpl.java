@@ -494,65 +494,78 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 检查客户的收货地址是否超出配送范围
+     * 检查客户的收货地址是否超出配送范围（完整修复版）
      */
     private void checkOutOfRange(String address) {
-        Map<String, String> map = new HashMap<>();
-        map.put("address",shopAddress);
-        map.put("output","json");
-        map.put("ak",ak);
+        // 1. 获取店铺坐标
+        Map<String, String> shopParams = new HashMap<>();
+        shopParams.put("address", shopAddress); // shopAddress应为预定义的店铺地址
+        shopParams.put("output", "json");
+        shopParams.put("ak", ak); // ak是百度地图服务端AK
 
-        //获取店铺的经纬度坐标
-        String shopCoordinate = HttpClientUtil.doGet("https://api.map.baidu.com/geocoding/v3", map);
+        String shopResponse = HttpClientUtil.doGet("https://api.map.baidu.com/geocoding/v3", shopParams);
+        JSONObject shopJson = JSON.parseObject(shopResponse);
 
-        JSONObject jsonObject = JSON.parseObject(shopCoordinate);
-        if(!jsonObject.getString("status").equals("0")){
-            throw new OrderBusinessException("店铺地址解析失败");
+        // 店铺地址解析校验
+        if (!"0".equals(shopJson.getString("status"))) {
+            log.error("店铺地址解析失败，响应: {}", shopResponse);
+            throw new OrderBusinessException("店铺地址解析失败，状态码：" + shopJson.getString("status"));
         }
 
-        //数据解析
-        JSONObject location = jsonObject.getJSONObject("result").getJSONObject("location");
-        String lat = location.getString("lat");
-        String lng = location.getString("lng");
-        //店铺经纬度坐标
-        String shopLngLat = lat + "," + lng;
+        // 提取店铺坐标
+        JSONObject shopLocation = shopJson.getJSONObject("result").getJSONObject("location");
+        String shopLngLat = shopLocation.getString("lng") + "," + shopLocation.getString("lat");
 
-        map.put("address",address);
-        //获取用户收货地址的经纬度坐标
-        String userCoordinate = HttpClientUtil.doGet("https://api.map.baidu.com/geocoding/v3", map);
+        // 2. 获取用户坐标（使用独立参数对象）
+        Map<String, String> userParams = new HashMap<>();
+        userParams.put("address", address); // 用户传入的地址
+        userParams.put("output", "json");
+        userParams.put("ak", ak);
 
-        jsonObject = JSON.parseObject(userCoordinate);
-        if(!jsonObject.getString("status").equals("0")){
-            throw new OrderBusinessException("收货地址解析失败");
+        String userResponse = HttpClientUtil.doGet("https://api.map.baidu.com/geocoding/v3", userParams);
+        JSONObject userJson = JSON.parseObject(userResponse);
+
+        // 用户地址解析校验
+        if (!"0".equals(userJson.getString("status"))) {
+            log.error("用户地址解析失败，响应: {}", userResponse);
+            throw new OrderBusinessException("收货地址解析失败，状态码：" + userJson.getString("status"));
         }
 
-        //数据解析
-        location = jsonObject.getJSONObject("result").getJSONObject("location");
-        lat = location.getString("lat");
-        lng = location.getString("lng");
-        //用户收货地址经纬度坐标
-        String userLngLat = lat + "," + lng;
+        // 提取用户坐标
+        JSONObject userLocation = userJson.getJSONObject("result").getJSONObject("location");
+        String userLngLat = userLocation.getString("lng") + "," + userLocation.getString("lat");
 
-        map.put("origin",shopLngLat);
-        map.put("destination",userLngLat);
-        map.put("steps_info","0");
+        // 3. 路线规划（使用独立参数对象）
+        Map<String, String> routeParams = new HashMap<>();
+        routeParams.put("origin", shopLngLat);
+        routeParams.put("destination", userLngLat);
+        routeParams.put("ak", ak);
+        routeParams.put("steps_info", "0"); // 不需要路线步骤详情
 
-        //路线规划
-        String json = HttpClientUtil.doGet("https://api.map.baidu.com/directionlite/v1/driving", map);
+        String routeResponse = HttpClientUtil.doGet("https://api.map.baidu.com/directionlite/v1/driving", routeParams);
+        JSONObject routeJson = JSON.parseObject(routeResponse);
 
-        jsonObject = JSON.parseObject(json);
-        if(!jsonObject.getString("status").equals("0")){
-            throw new OrderBusinessException("配送路线规划失败");
+        // 路线规划校验
+        if (!"0".equals(routeJson.getString("status"))) {
+            log.error("路线规划失败，响应: {}", routeResponse);
+            throw new OrderBusinessException("配送路线规划失败，状态码：" + routeJson.getString("status"));
         }
 
-        //数据解析
-        JSONObject result = jsonObject.getJSONObject("result");
-        JSONArray jsonArray = (JSONArray) result.get("routes");
-        Integer distance = (Integer) ((JSONObject) jsonArray.get(0)).get("distance");
+        // 4. 解析距离（关键修复点）
+        JSONObject result = routeJson.getJSONObject("result");
+        JSONArray routes = result.getJSONArray("routes");
+        if (routes == null || routes.isEmpty()) {
+            throw new OrderBusinessException("无有效路线数据");
+        }
 
-        if(distance > 5000){
-            //配送距离超过5000米
-            throw new OrderBusinessException("超出配送范围");
+        JSONObject firstRoute = routes.getJSONObject(0);
+        Integer distance = firstRoute.getInteger("distance"); // 确认单位为米
+
+        // 5. 距离判断（必须抛出异常！）
+        log.info("配送距离计算：{}米", distance);
+        if (distance > 5000) {
+            log.error("超出配送范围：{}米 > 5000米", distance);
+            throw new OrderBusinessException("超出配送范围（" + distance + "米）"); // 中断订单提交
         }
     }
 }
