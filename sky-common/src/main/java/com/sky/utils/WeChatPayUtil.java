@@ -6,10 +6,12 @@ import com.sky.properties.WeChatProperties;
 import com.wechat.pay.contrib.apache.httpclient.WechatPayHttpClientBuilder;
 import com.wechat.pay.contrib.apache.httpclient.util.PemUtil;
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -17,10 +19,11 @@ import org.apache.http.util.EntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
@@ -38,6 +41,10 @@ public class WeChatPayUtil {
     //申请退款接口地址
     public static final String REFUNDS = "https://api.mch.weixin.qq.com/v3/refund/domestic/refunds";
 
+
+    private static final String SIGN_ALGORITHM = "SHA256withRSA"; // 提取为常量
+    private static final String SIGN_TYPE = "RSA"; // 提取为常量
+
     @Autowired
     private WeChatProperties weChatProperties;
 
@@ -45,13 +52,13 @@ public class WeChatPayUtil {
      * 获取调用微信接口的客户端工具对象
      */
     private CloseableHttpClient getClient() {
-        PrivateKey merchantPrivateKey = null;
+        PrivateKey merchantPrivateKey;
         try {
             //merchantPrivateKey商户API私钥，如何加载商户API私钥请看常见问题
             merchantPrivateKey = PemUtil.loadPrivateKey(new FileInputStream(weChatProperties.getPrivateKeyFilePath()));
             //加载平台证书文件
             X509Certificate x509Certificate = PemUtil.loadCertificate(new FileInputStream(weChatProperties.getWeChatPayCertFilePath()));
-            //wechatPayCertificates微信支付平台证书列表。你也可以使用后面章节提到的“定时更新平台证书功能”，而不需要关心平台证书的来龙去脉
+            //wechatPayCertificates微信支付平台证书列表。
             List<X509Certificate> wechatPayCertificates = Collections.singletonList(x509Certificate);
 
             WechatPayHttpClientBuilder builder = WechatPayHttpClientBuilder.create()
@@ -61,56 +68,81 @@ public class WeChatPayUtil {
             // 通过WechatPayHttpClientBuilder构造的HttpClient，会自动的处理签名和验签
             return builder.build();
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            return null;
+            throw new RuntimeException("加载商户API私钥失败，请检查商户API私钥文件路径是否正确配置。");
         }
+    }
+
+    // 枚举定义 HTTP 方法
+    enum HttpMethod {
+        GET, POST
     }
 
     /**
      * 发送post方式请求
      */
     private String post(String url, String body) throws Exception {
-        CloseableHttpClient httpClient = getClient();
-
-        HttpPost httpPost = new HttpPost(url);
-        httpPost.addHeader(HttpHeaders.ACCEPT, ContentType.APPLICATION_JSON.toString());
-        httpPost.addHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.toString());
-        httpPost.addHeader("Wechatpay-Serial", weChatProperties.getMchSerialNo());
-        httpPost.setEntity(new StringEntity(body, "UTF-8"));
-
-        CloseableHttpResponse response = httpClient.execute(httpPost);
-        try {
-            return EntityUtils.toString(response.getEntity());
-        } finally {
-            httpClient.close();
-            response.close();
-        }
+        return executeRequest(url, body, HttpMethod.POST);
     }
 
     /**
      * 发送get方式请求
      */
     private String get(String url) throws Exception {
-        CloseableHttpClient httpClient = getClient();
+        return executeRequest(url, null, HttpMethod.GET);
+    }
 
-        HttpGet httpGet = new HttpGet(url);
-        httpGet.addHeader(HttpHeaders.ACCEPT, ContentType.APPLICATION_JSON.toString());
-        httpGet.addHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.toString());
-        httpGet.addHeader("Wechatpay-Serial", weChatProperties.getMchSerialNo());
-
-        CloseableHttpResponse response = httpClient.execute(httpGet);
-        try {
-            return EntityUtils.toString(response.getEntity());
-        } finally {
-            httpClient.close();
-            response.close();
+    /**
+     * 通用请求执行方法
+     */
+    private String executeRequest(String url, String body, HttpMethod method) throws Exception {
+        // 校验 Wechatpay-Serial 是否为空
+        String mchSerialNo = weChatProperties.getMchSerialNo();
+        if (mchSerialNo == null || mchSerialNo.isEmpty()) {
+            throw new IllegalArgumentException("微信支付序列号（Wechatpay-Serial）不能为空，请检查配置文件是否正确设置。");
         }
+
+        try (CloseableHttpClient httpClient = getClient()) {
+            HttpUriRequest request;
+            if (method == HttpMethod.POST) {
+                HttpPost httpPost = new HttpPost(url);
+                httpPost.addHeader(HttpHeaders.ACCEPT, ContentType.APPLICATION_JSON.toString());
+                httpPost.addHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.toString());
+                httpPost.addHeader("Wechatpay-Serial", mchSerialNo);
+
+                if (body != null) {
+                    httpPost.setEntity(new StringEntity(body, "UTF-8"));
+                }
+                request = httpPost;
+            } else {
+                HttpGet httpGet = new HttpGet(url);
+                httpGet.addHeader(HttpHeaders.ACCEPT, ContentType.APPLICATION_JSON.toString());
+                httpGet.addHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.toString());
+                httpGet.addHeader("Wechatpay-Serial", mchSerialNo);
+                request = httpGet;
+            }
+
+            if (httpClient != null) {
+                try (CloseableHttpResponse response = httpClient.execute(request)) {
+                    HttpEntity entity = response.getEntity();
+                    if (entity != null) {
+                        return EntityUtils.toString(entity);
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException("执行 HTTP 请求时发生错误: " + e.getMessage(), e);
+                }
+            }
+        }
+        return null;
     }
 
     /**
      * jsapi下单
      */
     private String jsapi(String orderNum, BigDecimal total, String description, String openid) throws Exception {
+        if (orderNum == null || total == null || total.compareTo(BigDecimal.ZERO) <= 0 || description == null || openid == null) {
+            throw new IllegalArgumentException("Invalid input parameters");
+        }
+
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("appid", weChatProperties.getAppid());
         jsonObject.put("mchid", weChatProperties.getMchid());
@@ -119,7 +151,7 @@ public class WeChatPayUtil {
         jsonObject.put("notify_url", weChatProperties.getNotifyUrl());
 
         JSONObject amount = new JSONObject();
-        amount.put("total", total.multiply(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_UP).intValue());
+        amount.put("total", convertToInteger(total));
         amount.put("currency", "CNY");
 
         jsonObject.put("amount", amount);
@@ -135,68 +167,63 @@ public class WeChatPayUtil {
 
     /**
      * 小程序支付
-     * @param orderNum    商户订单号
-     * @param total       金额，单位 元
-     * @param description 商品描述
-     * @param openid      微信用户的openid
      */
     public JSONObject pay(String orderNum, BigDecimal total, String description, String openid) throws Exception {
-        //统一下单，生成预支付交易单
+        if (orderNum == null || total == null || total.compareTo(BigDecimal.ZERO) <= 0 || description == null || openid == null) {
+            throw new IllegalArgumentException("输入参数无效，请检查 orderNum、total、description 和 openid 是否正确设置。");
+        }
+
+        // 统一下单，生成预支付交易单
         String bodyAsString = jsapi(orderNum, total, description, openid);
-        //解析返回结果
+
+        if (bodyAsString == null || bodyAsString.isEmpty()) {
+            throw new RuntimeException("统一下单请求失败或返回空响应，请检查接口调用是否正常");
+        }
+
+        // 解析返回结果
         JSONObject jsonObject = JSON.parseObject(bodyAsString);
-        System.out.println(jsonObject);
 
         String prepayId = jsonObject.getString("prepay_id");
-        if (prepayId != null) {
-            String timeStamp = String.valueOf(System.currentTimeMillis() / 1000);
-            String nonceStr = RandomStringUtils.randomNumeric(32);
-            ArrayList<Object> list = new ArrayList<>();
-            list.add(weChatProperties.getAppid());
-            list.add(timeStamp);
-            list.add(nonceStr);
-            list.add("prepay_id=" + prepayId);
-            //二次签名，调起支付需要重新签名
-            StringBuilder stringBuilder = new StringBuilder();
-            for (Object o : list) {
-                stringBuilder.append(o).append("\n");
-            }
-            String signMessage = stringBuilder.toString();
-            byte[] message = signMessage.getBytes();
-
-            Signature signature = Signature.getInstance("SHA256withRSA");
-            signature.initSign(PemUtil.loadPrivateKey(new FileInputStream(new File(weChatProperties.getPrivateKeyFilePath()))));
-            signature.update(message);
-            String packageSign = Base64.getEncoder().encodeToString(signature.sign());
-
-            //构造数据给微信小程序，用于调起微信支付
-            JSONObject jo = new JSONObject();
-            jo.put("timeStamp", timeStamp);
-            jo.put("nonceStr", nonceStr);
-            jo.put("package", "prepay_id=" + prepayId);
-            jo.put("signType", "RSA");
-            jo.put("paySign", packageSign);
-
-            return jo;
+        if (prepayId == null || prepayId.isEmpty()) {
+            throw new RuntimeException("响应中缺少预支付 ID (prepay_id)，请检查接口返回结果是否正确");
         }
-        return jsonObject;
+
+        String timeStamp = String.valueOf(System.currentTimeMillis() / 1000);
+        String nonceStr = generateSecureNonce();
+
+        // 二次签名
+        String packageSign = signMessage(List.of(
+                weChatProperties.getAppid(),
+                timeStamp,
+                nonceStr,
+                "prepay_id=" + prepayId
+        ));
+
+        // 构造数据给微信小程序，用于调起微信支付
+        JSONObject jo = new JSONObject();
+        jo.put("timeStamp", timeStamp);
+        jo.put("nonceStr", nonceStr);
+        jo.put("package", "prepay_id=" + prepayId);
+        jo.put("signType", SIGN_TYPE);
+        jo.put("paySign", packageSign);
+
+        return jo;
     }
 
     /**
      * 申请退款
-     * @param outTradeNo    商户订单号
-     * @param outRefundNo   商户退款单号
-     * @param refund        退款金额
-     * @param total         原订单金额
      */
     public String refund(String outTradeNo, String outRefundNo, BigDecimal refund, BigDecimal total) throws Exception {
+        if (outTradeNo == null || outRefundNo == null || refund == null || refund.compareTo(BigDecimal.ZERO) <= 0 || total == null || total.compareTo(refund) < 0) {
+            throw new IllegalArgumentException("无效的输入参数");
+        }
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("out_trade_no", outTradeNo);
         jsonObject.put("out_refund_no", outRefundNo);
 
         JSONObject amount = new JSONObject();
-        amount.put("refund", refund.multiply(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_UP).intValue());
-        amount.put("total", total.multiply(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_UP).intValue());
+        amount.put("refund", convertToInteger(refund));
+        amount.put("total", convertToInteger(total));
         amount.put("currency", "CNY");
 
         jsonObject.put("amount", amount);
@@ -204,7 +231,45 @@ public class WeChatPayUtil {
 
         String body = jsonObject.toJSONString();
 
-        //调用申请退款接口
-        return post(REFUNDS, body);
+        // 调用申请退款接口
+        String result = post(REFUNDS, body);
+
+        if (result == null || result.isEmpty()) {
+            throw new RuntimeException("退款请求失败或返回空响应");
+        }
+
+        return result;
+    }
+
+    /**
+     * 签名方法
+     */
+    private String signMessage(List<String> elements) throws Exception {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (String element : elements) {
+            stringBuilder.append(element).append("\n");
+        }
+        byte[] message = stringBuilder.toString().getBytes();
+
+        Signature signature = Signature.getInstance(SIGN_ALGORITHM);
+        PrivateKey privateKey = PemUtil.loadPrivateKey(new FileInputStream(weChatProperties.getPrivateKeyFilePath()));
+        signature.initSign(privateKey);
+        signature.update(message);
+        return Base64.getEncoder().encodeToString(signature.sign());
+    }
+
+    /**
+     * 生成安全的随机数
+     */
+    private String generateSecureNonce() {
+        return RandomStringUtils.randomAlphanumeric(32); // 使用更安全的随机数生成器
+    }
+
+    /**
+     * 将金额转换为整数（分）
+     */
+    private int convertToInteger(BigDecimal amount) {
+        return amount.multiply(new BigDecimal(100)).setScale(0, RoundingMode.HALF_UP).intValue();
+
     }
 }

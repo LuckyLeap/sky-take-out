@@ -61,6 +61,12 @@ sky:
     appid: wx7ec0b16178bb6e85
     secret: 2193b78ece7bdd8b6259169c817cbf9a
 
+  # 配置店铺地址和百度地图的AK
+  shop:
+    address: "北京市海淀区上地十街10号"
+  baidu:
+    ak: "0yb7FOOnKzIsEoDe8J7HIZaYZsmv4dXN"
+
 # 配置Swagger
 springdoc:
   swagger-ui:
