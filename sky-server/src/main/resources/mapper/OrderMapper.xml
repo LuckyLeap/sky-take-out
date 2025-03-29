@@ -67,4 +67,15 @@
         </where>
         order by order_time desc
     </select>
+
+    <select id="selectDailyTurnoverList" resultType="com.sky.dto.DailyTurnoverDTO">
+        SELECT
+            DATE(order_time) AS orderDate,
+            COALESCE(SUM(amount), 0) AS sum
+        FROM orders
+        WHERE
+            order_time BETWEEN #{begin} AND #{end}
+          AND status = #{status}
+        GROUP BY DATE(order_time)
+    </select>
 </mapper>
