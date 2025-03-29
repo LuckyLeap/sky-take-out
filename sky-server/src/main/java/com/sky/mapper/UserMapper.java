@@ -1,8 +1,11 @@
 package com.sky.mapper;
 
+import com.sky.dto.DailyUserDTO;
 import com.sky.entity.User;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Mapper
 public interface UserMapper {
@@ -23,4 +26,12 @@ public interface UserMapper {
      */
     @Select("select * from user where id = #{userId}")
     User getById(Long userId);
+
+    /**
+     * 查询每日新增用户数
+     */
+    List<DailyUserDTO> selectDailyNewUsers(
+            @Param("begin") LocalDateTime begin,
+            @Param("end") LocalDateTime end
+    );
 }

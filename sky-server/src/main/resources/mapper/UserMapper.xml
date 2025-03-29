@@ -7,4 +7,22 @@
         insert into user (openid, name, phone, sex, id_number, avatar, create_time)
         values (#{openid}, #{name}, #{phone}, #{sex}, #{idNumber}, #{avatar}, #{createTime})
     </insert>
+
+    <select id="selectDailyNewUsers" resultType="com.sky.dto.DailyUserDTO">
+        WITH RECURSIVE date_series AS (
+        SELECT #{begin} AS date
+        UNION ALL
+        SELECT date + INTERVAL 1 DAY
+        FROM date_series
+        WHERE date &lt;= #{end}
+        )
+        SELECT
+        DATE(date_series.date) AS date,
+        COUNT(u.id) AS count
+        FROM date_series
+        LEFT JOIN user u ON DATE(u.create_time) = date_series.date
+        GROUP BY date_series.date
+        ORDER BY date_series.date
+    </select>
+
 </mapper>
