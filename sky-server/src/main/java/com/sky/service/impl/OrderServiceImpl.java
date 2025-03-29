@@ -21,6 +21,7 @@ import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
+import com.sky.websocket.WebSocketServer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -55,6 +58,8 @@ public class OrderServiceImpl implements OrderService {
     private UserMapper userMapper;
     @Autowired
     private AddressBookMapper addressBookMapper;
+    @Autowired
+    private WebSocketServer webSocketServer;
 //    @Autowired
 //    private WeChatPayUtil weChatPayUtil;
 
@@ -157,20 +162,7 @@ public class OrderServiceImpl implements OrderService {
         // 根据订单号查询当前用户的该订单
         Orders ordersDB = orderMapper.getByNumberAndUserId(ordersPaymentDTO.getOrderNumber(), userId);
 
-        // 根据订单id更新订单的状态、支付方式、支付状态、结账时间
-        Orders orders = new Orders();
-        orders.setId(ordersDB.getId());
-        orders.setStatus(Orders.TO_BE_CONFIRMED);
-        orders.setPayStatus(Orders.PAID);
-        orders.setCheckoutTime(LocalDateTime.now());
-//        Orders orders = Orders.builder()
-//                .id(ordersDB.getId())
-//                .status(Orders.TO_BE_CONFIRMED) // 订单状态，待接单
-//                .payStatus(Orders.PAID) // 支付状态，已支付
-//                .checkoutTime(LocalDateTime.now()) // 更新支付时间
-//                .build();
-
-        orderMapper.update(orders);
+        paySuccess(ordersDB.getNumber());
 
         return vo;
     }
@@ -191,6 +183,15 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         orderMapper.update(orders);
+
+        // 通过WebSocket向客户端浏览器推送消息 [type orderId content]
+        Map<String, Object> map = new HashMap<>();
+        map.put("type", 1); //1:来电提醒 2:客户催单
+        map.put("orderId", ordersDB.getId());
+        map.put("content", "订单号：" + outTradeNo);
+
+        String json = JSON.toJSONString(map);
+        webSocketServer.sendToAllClient(json);
     }
 
     /**
@@ -312,6 +313,28 @@ public class OrderServiceImpl implements OrderService {
 
         // 将购物车对象批量添加到数据库
         shoppingCartMapper.insertBatch(shoppingCartList);
+    }
+
+    /**
+     * 客户催单
+     */
+    public void reminder(Long id) {
+        // 根据id查询订单
+        Orders ordersDB = orderMapper.getById(id);
+
+        // 校验订单是否存在
+        if (ordersDB == null) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("type", 2); //1:来电提醒 2:客户催单
+        map.put("orderId", id);
+        map.put("content", "订单号：" + ordersDB.getNumber());
+
+        // 通过WebSocket将催单消息发送给客户端
+        String json = JSON.toJSONString(map);
+        webSocketServer.sendToAllClient(json);
     }
 
     /**
@@ -494,7 +517,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 检查客户的收货地址是否超出配送范围（完整修复版）
+     * 检查客户的收货地址是否超出配送范围
      */
     private void checkOutOfRange(String address) {
         // 1. 获取店铺坐标
@@ -514,7 +537,9 @@ public class OrderServiceImpl implements OrderService {
 
         // 提取店铺坐标
         JSONObject shopLocation = shopJson.getJSONObject("result").getJSONObject("location");
-        String shopLngLat = shopLocation.getString("lng") + "," + shopLocation.getString("lat");
+        Double shopLng = shopLocation.getDouble("lng");
+        Double shopLat = shopLocation.getDouble("lat");
+        String shopLngLat = String.format("%.6f,%.6f", shopLng, shopLat);
 
         // 2. 获取用户坐标（使用独立参数对象）
         Map<String, String> userParams = new HashMap<>();
@@ -533,21 +558,33 @@ public class OrderServiceImpl implements OrderService {
 
         // 提取用户坐标
         JSONObject userLocation = userJson.getJSONObject("result").getJSONObject("location");
-        String userLngLat = userLocation.getString("lng") + "," + userLocation.getString("lat");
+        Double userLng = userLocation.getDouble("lng");
+        Double userLat = userLocation.getDouble("lat");
+        String userLngLat = String.format("%.6f,%.6f", userLng, userLat);
+
+        log.info("路线规划请求参数: origin={}, destination={}", shopLngLat, userLngLat);
 
         // 3. 路线规划（使用独立参数对象）
         Map<String, String> routeParams = new HashMap<>();
         routeParams.put("origin", shopLngLat);
         routeParams.put("destination", userLngLat);
         routeParams.put("ak", ak);
-        routeParams.put("steps_info", "0"); // 不需要路线步骤详情
+        routeParams.put("steps_info", "0"); // 不返回详细路径信息
+        routeParams.put("coord_type", "bd09ll"); // 明确指定坐标系
 
         String routeResponse = HttpClientUtil.doGet("https://api.map.baidu.com/directionlite/v1/driving", routeParams);
         JSONObject routeJson = JSON.parseObject(routeResponse);
 
-        // 路线规划校验
         if (!"0".equals(routeJson.getString("status"))) {
-            log.error("路线规划失败，响应: {}", routeResponse);
+            String debugUrl = "https://api.map.baidu.com/directionlite/v1/driving" +
+                    "?origin=" + URLEncoder.encode(shopLngLat, StandardCharsets.UTF_8) +
+                    "&destination=" + URLEncoder.encode(userLngLat, StandardCharsets.UTF_8) +
+                    "&ak=" + ak +
+                    "&steps_info=0" +
+                    "&coord_type=bd09ll";
+
+            log.error("路线规划失败，完整请求URL: {}", debugUrl);
+            log.error("失败响应: {}", routeResponse);
             throw new OrderBusinessException("配送路线规划失败，状态码：" + routeJson.getString("status"));
         }
 
