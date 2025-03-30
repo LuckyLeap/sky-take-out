@@ -16,8 +16,12 @@ import java.util.List;
 @Tag(name = "C端-分类接口")
 public class CategoryController {
 
+    private final CategoryService categoryService;
+
     @Autowired
-    private CategoryService categoryService;
+    public CategoryController(CategoryService categoryService) {
+        this.categoryService = categoryService;
+    }
 
     /**
      * 查询分类

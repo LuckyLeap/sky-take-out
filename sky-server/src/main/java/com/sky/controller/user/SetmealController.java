@@ -20,8 +20,12 @@ import java.util.List;
 @Tag(name = "C端-套餐浏览接口")
 public class SetmealController {
 
+    private final SetmealService setmealService;
+
     @Autowired
-    private SetmealService setmealService;
+    public SetmealController(SetmealService setmealService) {
+        this.setmealService = setmealService;
+    }
 
     /**
      * 条件查询

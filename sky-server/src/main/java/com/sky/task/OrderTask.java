@@ -22,7 +22,7 @@ public class OrderTask {
     /**
      * 处理超时订单
      */
-    @Scheduled(cron = "0 0/2 * * * ?") // 每2分钟执行一次
+    @Scheduled(cron = "0 0/3 * * * ?") // 每3分钟执行一次
     public void processTimeoutOrder() {
         log.info("定时处理超时订单：{}", LocalDateTime.now());
         // select * from orders where status = ? and order_time < (当前时间 - 15分钟)

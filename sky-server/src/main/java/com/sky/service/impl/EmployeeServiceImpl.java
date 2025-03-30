@@ -8,6 +8,7 @@ import com.sky.constant.StatusConstant;
 import com.sky.dto.EmployeeDTO;
 import com.sky.dto.EmployeeLoginDTO;
 import com.sky.dto.EmployeePageQueryDTO;
+import com.sky.dto.PasswordEditDTO;
 import com.sky.entity.Employee;
 import com.sky.exception.AccountLockedException;
 import com.sky.exception.AccountNotFoundException;
@@ -18,7 +19,9 @@ import com.sky.service.EmployeeService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Objects;
@@ -26,8 +29,12 @@ import java.util.Objects;
 @Service
 public class EmployeeServiceImpl implements EmployeeService {
 
+    private final EmployeeMapper employeeMapper;
+
     @Autowired
-    private EmployeeMapper employeeMapper;
+    public EmployeeServiceImpl(EmployeeMapper employeeMapper) {
+        this.employeeMapper = employeeMapper;
+    }
 
     /**
      * 员工登录
@@ -120,6 +127,37 @@ public class EmployeeServiceImpl implements EmployeeService {
     public void update(EmployeeDTO employeeDTO) {
         Employee employee = new Employee();
         BeanUtils.copyProperties(employeeDTO, employee);
+        employeeMapper.update(employee);
+    }
+
+    /**
+     * 修改密码
+     */
+    @Transactional
+    public void editPassword(PasswordEditDTO passwordEditDTO) {
+        // 校验输入参数是否为空
+        if (passwordEditDTO == null || !StringUtils.hasText(passwordEditDTO.getOldPassword())
+                || !StringUtils.hasText(passwordEditDTO.getNewPassword())) {
+            throw new IllegalArgumentException("参数不能为空");
+        }
+
+        //1. 根据用户id查询员工信息
+        Employee employee = employeeMapper.getById(passwordEditDTO.getEmpId());
+        if (employee == null) {
+            //账号不存在
+            throw new AccountNotFoundException(MessageConstant.ACCOUNT_NOT_FOUND);
+        }
+
+        //2. 对比旧密码
+        String oldPassword = passwordEditDTO.getOldPassword();
+        oldPassword = DigestUtils.md5DigestAsHex(oldPassword.getBytes());
+        if (!oldPassword.equals(employee.getPassword())) {
+            //旧密码错误
+            throw new PasswordErrorException(MessageConstant.PASSWORD_ERROR);
+        }
+        String newPassword = passwordEditDTO.getNewPassword();
+        newPassword = DigestUtils.md5DigestAsHex(newPassword.getBytes());
+        employee.setPassword(newPassword);
         employeeMapper.update(employee);
     }
 }

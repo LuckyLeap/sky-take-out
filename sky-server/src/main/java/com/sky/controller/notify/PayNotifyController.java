@@ -26,10 +26,14 @@ import java.util.HashMap;
 @Slf4j
 public class PayNotifyController {
 
+    private final OrderService orderService;
+    private final WeChatProperties weChatProperties;
+
     @Autowired
-    private OrderService orderService;
-    @Autowired
-    private WeChatProperties weChatProperties;
+    public PayNotifyController(OrderService orderService, WeChatProperties weChatProperties) {
+        this.orderService = orderService;
+        this.weChatProperties = weChatProperties;
+    }
 
     /**
      * 支付成功回调

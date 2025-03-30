@@ -32,10 +32,14 @@ import java.util.List;
 @Slf4j
 public class WebMvcConfiguration extends WebMvcConfigurationSupport {
 
+    private final JwtTokenAdminInterceptor jwtTokenAdminInterceptor;
+    private final JwtTokenUserInterceptor jwtTokenUserInterceptor;
+
     @Autowired
-    private JwtTokenAdminInterceptor jwtTokenAdminInterceptor;
-    @Autowired
-    private JwtTokenUserInterceptor jwtTokenUserInterceptor;
+    public WebMvcConfiguration(JwtTokenAdminInterceptor jwtTokenAdminInterceptor, JwtTokenUserInterceptor jwtTokenUserInterceptor) {
+        this.jwtTokenAdminInterceptor = jwtTokenAdminInterceptor;
+        this.jwtTokenUserInterceptor = jwtTokenUserInterceptor;
+    }
 
     /**
      * 注册自定义拦截器

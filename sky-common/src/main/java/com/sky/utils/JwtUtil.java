@@ -1,9 +1,7 @@
 package com.sky.utils;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtBuilder;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
@@ -34,17 +32,23 @@ public class JwtUtil {
     }
 
     /**
-     * Token解密
+     * Token解密（最终推荐版）
+     * @param secretKey 密钥字符串
+     * @param token 可能包含Bearer前缀的token
+     * @return 解析后的Claims
+     * @throws RuntimeException 包含所有JWT解析异常
      */
     public static Claims parseJWT(String secretKey, String token) {
-        // 得到DefaultJwtParser
-        // 设置签名的秘钥
-        // 设置需要解析的jwt
-        return Jwts.parser()
-                // 设置签名的秘钥
-                .setSigningKey(secretKey.getBytes(StandardCharsets.UTF_8))
-                // 设置需要解析的jwt
-                .parseClaimsJws(token).getBody();
-    }
+        try {
+            String pureToken = token.startsWith("Bearer ") ?
+                    token.substring(7) : token;
 
+            return Jwts.parser()
+                    .setSigningKey(secretKey.getBytes(StandardCharsets.UTF_8))
+                    .parseClaimsJws(pureToken)
+                    .getBody();
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new RuntimeException("Token无效或已过期", e);
+        }
+    }
 }

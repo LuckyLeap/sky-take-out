@@ -19,10 +19,14 @@ import java.util.List;
 @Tag(name = "C端-菜品浏览接口")
 public class DishController {
 
+    private final DishService dishService;
+    private final RedisTemplate<String, Object> redisTemplate;
+
     @Autowired
-    private DishService dishService;
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    public DishController(DishService dishService, RedisTemplate<String, Object> redisTemplate) {
+        this.dishService = dishService;
+        this.redisTemplate = redisTemplate;
+    }
 
     /**
      * 根据分类id查询菜品

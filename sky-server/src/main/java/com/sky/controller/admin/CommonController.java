@@ -24,8 +24,12 @@ import java.util.UUID;
 @Slf4j
 public class CommonController {
 
+    private final AliOssUtil aliOssUtil;
+
     @Autowired
-    private AliOssUtil aliOssUtil;
+    public CommonController(AliOssUtil aliOssUtil) {
+        this.aliOssUtil = aliOssUtil;
+    }
 
     @PostMapping("/upload")
     @Operation(summary = "文件上传", description = "通用文件上传接口")

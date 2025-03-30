@@ -24,8 +24,12 @@ import java.util.List;
 @Tag(name = "套餐管理接口")
 public class SetmealController {
 
+    private final SetmealService setmealService;
+
     @Autowired
-    private SetmealService setmealService;
+    public SetmealController(SetmealService setmealService) {
+        this.setmealService = setmealService;
+    }
 
     /**
      * 新增套餐

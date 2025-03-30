@@ -21,12 +21,16 @@ import java.util.List;
 @Service
 public class ShoppingCartServiceImpl implements ShoppingCartService {
 
+    private final ShoppingCartMapper shoppingCartMapper;
+    private final DishMapper dishMapper;
+    private final SetmealMapper setmealMapper;
+
     @Autowired
-    private ShoppingCartMapper shoppingCartMapper;
-    @Autowired
-    private DishMapper dishMapper;
-    @Autowired
-    private SetmealMapper setmealMapper;
+    public ShoppingCartServiceImpl(ShoppingCartMapper shoppingCartMapper, DishMapper dishMapper, SetmealMapper setmealMapper) {
+        this.shoppingCartMapper = shoppingCartMapper;
+        this.dishMapper = dishMapper;
+        this.setmealMapper = setmealMapper;
+    }
 
     /**
      * 添加购物车

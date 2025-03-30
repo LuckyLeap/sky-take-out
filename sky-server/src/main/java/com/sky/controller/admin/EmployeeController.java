@@ -1,9 +1,11 @@
 package com.sky.controller.admin;
 
+import com.sky.annotation.CurrentEmpId;
 import com.sky.constant.JwtClaimsConstant;
 import com.sky.dto.EmployeeDTO;
 import com.sky.dto.EmployeeLoginDTO;
 import com.sky.dto.EmployeePageQueryDTO;
+import com.sky.dto.PasswordEditDTO;
 import com.sky.entity.Employee;
 import com.sky.properties.JwtProperties;
 import com.sky.result.PageResult;
@@ -16,7 +18,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,10 +30,14 @@ import java.util.Map;
 @Tag(name = "员工接口")
 public class EmployeeController {
 
+    private final EmployeeService employeeService;
+    private final JwtProperties jwtProperties;
+
     @Autowired
-    private EmployeeService employeeService;
-    @Autowired
-    private JwtProperties jwtProperties;
+    public EmployeeController(EmployeeService employeeService, JwtProperties jwtProperties) {
+        this.employeeService = employeeService;
+        this.jwtProperties = jwtProperties;
+    }
 
     /**
      * 登录
@@ -76,7 +81,7 @@ public class EmployeeController {
      */
     @PostMapping
     @Operation(summary = "新增员工", description = "新增员工信息")
-    public Result<String> save(@RequestBody EmployeeDTO employeeDTO){
+    public Result<String> save(@RequestBody EmployeeDTO employeeDTO) {
         log.info("新增员工: {}", employeeDTO);
         employeeService.save(employeeDTO);
         return Result.success();
@@ -123,6 +128,20 @@ public class EmployeeController {
     public Result<String> update(@RequestBody EmployeeDTO employeeDTO) {
         log.info("修改员工信息: {}", employeeDTO);
         employeeService.update(employeeDTO);
+        return Result.success();
+    }
+
+    /**
+     * 修改密码
+     */
+    @PostMapping("/editPassword")
+    @Operation(summary = "修改密码", description = "修改密码")
+    public Result<String> editPassword(
+            @RequestBody PasswordEditDTO passwordEditDTO,
+            @CurrentEmpId Long empId) {  // 自动注入empId
+        passwordEditDTO.setEmpId(empId);
+        log.info("修改密码: {}", passwordEditDTO);
+        employeeService.editPassword(passwordEditDTO);
         return Result.success();
     }
 }

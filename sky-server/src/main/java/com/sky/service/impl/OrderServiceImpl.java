@@ -48,20 +48,24 @@ public class OrderServiceImpl implements OrderService {
     @Value("${sky.baidu.ak}")
     private String ak;
 
-    @Autowired
-    private OrderMapper orderMapper;
-    @Autowired
-    private OrderDetailMapper orderDetailMapper;
-    @Autowired
-    private ShoppingCartMapper shoppingCartMapper;
-    @Autowired
-    private UserMapper userMapper;
-    @Autowired
-    private AddressBookMapper addressBookMapper;
-    @Autowired
-    private WebSocketServer webSocketServer;
+    private final OrderMapper orderMapper;
+    private final OrderDetailMapper orderDetailMapper;
+    private final ShoppingCartMapper shoppingCartMapper;
+    private final UserMapper userMapper;
+    private final AddressBookMapper addressBookMapper;
+    private final WebSocketServer webSocketServer;
 //    @Autowired
 //    private WeChatPayUtil weChatPayUtil;
+
+    @Autowired
+    public OrderServiceImpl(OrderMapper orderMapper, OrderDetailMapper orderDetailMapper, ShoppingCartMapper shoppingCartMapper, UserMapper userMapper, AddressBookMapper addressBookMapper, WebSocketServer webSocketServer) {
+        this.orderMapper = orderMapper;
+        this.orderDetailMapper = orderDetailMapper;
+        this.shoppingCartMapper = shoppingCartMapper;
+        this.userMapper = userMapper;
+        this.addressBookMapper = addressBookMapper;
+        this.webSocketServer = webSocketServer;
+    }
 
     /**
      * 用户下单

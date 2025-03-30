@@ -26,10 +26,14 @@ import java.util.Set;
 @Tag(name = "菜品管理接口")
 public class DishController {
 
+    private final DishService dishService;
+    private final RedisTemplate<String, Object> redisTemplate;
+
     @Autowired
-    private DishService dishService;
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    public DishController(DishService dishService, RedisTemplate<String, Object> redisTemplate) {
+        this.dishService = dishService;
+        this.redisTemplate = redisTemplate;
+    }
 
     /**
      * 新增菜品

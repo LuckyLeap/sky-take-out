@@ -17,8 +17,12 @@ import java.util.List;
 @Tag(name = "C端-地址管理接口")
 public class AddressBookController {
 
-    @Autowired
     private AddressBookService addressBookService;
+
+    @Autowired
+    public void setAddressBookService(AddressBookService addressBookService) {
+        this.addressBookService = addressBookService;
+    }
 
     /**
      * 查询当前登录用户的所有地址信息

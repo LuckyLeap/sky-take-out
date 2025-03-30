@@ -21,8 +21,12 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "订单管理接口")
 public class OrderController {
 
+    private final OrderService orderService;
+
     @Autowired
-    private OrderService orderService;
+    public OrderController(OrderService orderService) {
+        this.orderService = orderService;
+    }
 
     /**
      * 订单搜索

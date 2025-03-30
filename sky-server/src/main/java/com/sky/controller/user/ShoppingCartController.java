@@ -21,8 +21,12 @@ import java.util.List;
 @Tag(name = "C端-购物车接口")
 public class ShoppingCartController {
 
+    private final ShoppingCartService shoppingCartService;
+
     @Autowired
-    private ShoppingCartService shoppingCartService;
+    public ShoppingCartController(ShoppingCartService shoppingCartService) {
+        this.shoppingCartService = shoppingCartService;
+    }
 
     /**
      * 添加购物车

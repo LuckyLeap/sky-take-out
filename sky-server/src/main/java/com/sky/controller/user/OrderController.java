@@ -24,8 +24,12 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class OrderController {
 
+    private final OrderService orderService;
+
     @Autowired
-    private OrderService orderService;
+    public OrderController(OrderService orderService) {
+        this.orderService = orderService;
+    }
 
     /**
      * 用户下单

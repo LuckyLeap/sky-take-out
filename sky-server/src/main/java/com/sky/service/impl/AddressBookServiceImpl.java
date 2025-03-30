@@ -14,8 +14,12 @@ import java.util.List;
 @Slf4j
 public class AddressBookServiceImpl implements AddressBookService {
 
+    private final AddressBookMapper addressBookMapper;
+
     @Autowired
-    private AddressBookMapper addressBookMapper;
+    public AddressBookServiceImpl(AddressBookMapper addressBookMapper) {
+        this.addressBookMapper = addressBookMapper;
+    }
 
     /**
      * 条件查询

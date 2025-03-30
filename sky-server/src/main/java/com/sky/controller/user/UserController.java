@@ -26,10 +26,14 @@ import java.util.Map;
 @Tag(name = "C端用户接口")
 public class UserController {
 
+    private final UserService userService;
+    private final JwtProperties jwtProperties;
+
     @Autowired
-    private UserService userService;
-    @Autowired
-    private JwtProperties jwtProperties;
+    public UserController(UserService userService, JwtProperties jwtProperties) {
+        this.userService = userService;
+        this.jwtProperties = jwtProperties;
+    }
 
     /**
      * 微信登录

@@ -31,12 +31,16 @@ import java.util.Objects;
 @Service
 public class SetmealServiceImpl implements SetmealService {
 
+    private final SetmealMapper setmealMapper;
+    private final SetmealDishMapper setmealDishMapper;
+    private final DishMapper dishMapper;
+
     @Autowired
-    private SetmealMapper setmealMapper;
-    @Autowired
-    private SetmealDishMapper setmealDishMapper;
-    @Autowired
-    private DishMapper dishMapper;
+    public SetmealServiceImpl(SetmealMapper setmealMapper, SetmealDishMapper setmealDishMapper, DishMapper dishMapper) {
+        this.setmealMapper = setmealMapper;
+        this.setmealDishMapper = setmealDishMapper;
+        this.dishMapper = dishMapper;
+    }
 
     /**
      * 新增套餐

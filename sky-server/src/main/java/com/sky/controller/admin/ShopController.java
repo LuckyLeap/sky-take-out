@@ -16,8 +16,12 @@ public class ShopController {
 
     private static final String KEY = "SHOP_STATUS";
 
+    private final RedisTemplate<String, Object> redisTemplate;
+
     @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    public ShopController(RedisTemplate<String, Object> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 
     /**
      * 设置店铺状态

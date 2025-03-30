@@ -8,6 +8,7 @@ import com.sky.vo.TurnoverReportVO;
 import com.sky.vo.UserReportVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -25,8 +26,13 @@ import java.time.LocalDate;
 @RequestMapping("/admin/report")
 @Tag(name = "数据统计接口")
 public class ReportController {
+
+    private final ReportService reportService;
+
     @Autowired
-    private ReportService reportService;
+    public ReportController(ReportService reportService) {
+        this.reportService = reportService;
+    }
 
     /**
      * 营业额统计
@@ -74,5 +80,15 @@ public class ReportController {
             @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate end) {
         log.info("销量排名 Top 10:{},{}", begin, end);
         return Result.success(reportService.getSalesTop10(begin, end));
+    }
+
+    /**
+     * 导出运营数据Excel报表
+     */
+    @GetMapping("/export")
+    @Operation(summary = "导出运营数据Excel报表")
+    public void export(HttpServletResponse response){
+        log.info("导出运营数据Excel报表...");
+        reportService.exportBusinessData(response);
     }
 }

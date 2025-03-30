@@ -4,14 +4,19 @@ import com.sky.dto.*;
 import com.sky.mapper.OrderMapper;
 import com.sky.mapper.UserMapper;
 import com.sky.service.ReportService;
-import com.sky.vo.OrderReportVO;
-import com.sky.vo.SalesTop10ReportVO;
-import com.sky.vo.TurnoverReportVO;
-import com.sky.vo.UserReportVO;
+import com.sky.service.WorkspaceService;
+import com.sky.vo.*;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -22,10 +27,17 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class ReportServiceImpl implements ReportService {
+
+    private final OrderMapper orderMapper;
+    private final UserMapper userMapper;
+    private final WorkspaceService workspaceService;
+
     @Autowired
-    private OrderMapper orderMapper;
-    @Autowired
-    private UserMapper userMapper;
+    public ReportServiceImpl(OrderMapper orderMapper, UserMapper userMapper, WorkspaceService workspaceService) {
+        this.orderMapper = orderMapper;
+        this.userMapper = userMapper;
+        this.workspaceService = workspaceService;
+    }
 
     /**
      * 根据时间统计营业额
@@ -157,7 +169,74 @@ public class ReportServiceImpl implements ReportService {
                 .build();
     }
 
-    // 生成日期列表并校验
+    /**
+     * 导出运营数据Excel报表
+     */
+    public void exportBusinessData(HttpServletResponse response) {
+        // 1. 计算精确的30天范围（含当天）
+        LocalDate endDate = LocalDate.now().minusDays(1); // 截止到昨日
+        LocalDate startDate = endDate.minusDays(29);      // 30天区间
+
+        // 2. 预加载所有每日数据
+        Map<LocalDate, BusinessDataVO> dailyDataMap = new LinkedHashMap<>(30);
+        for (int i = 0; i < 30; i++) {
+            LocalDate date = startDate.plusDays(i);
+            LocalDateTime begin = date.atStartOfDay();
+            LocalDateTime end = date.atTime(LocalTime.MAX);
+            dailyDataMap.put(date, workspaceService.getBusinessData(begin, end));
+        }
+
+        // 3. 获取汇总数据（直接复用预加载数据）
+        BusinessDataVO summaryData = workspaceService.getBusinessData(
+                startDate.atStartOfDay(),
+                endDate.atTime(LocalTime.MAX)
+        );
+
+        try (
+                // 4. 使用try-with-resources自动关闭资源
+                InputStream in = getClass().getClassLoader().getResourceAsStream("template/运营数据报表模板.xlsx");
+                XSSFWorkbook excel = new XSSFWorkbook(in);
+                ServletOutputStream out = response.getOutputStream()
+        ) {
+            XSSFSheet sheet = excel.getSheet("Sheet1");
+
+            // 5. 填充汇总数据（合并操作）
+            sheet.getRow(1).getCell(1).setCellValue("时间：" + startDate + "至" + endDate);
+            XSSFRow row3 = sheet.getRow(3);
+            row3.getCell(2).setCellValue(summaryData.getTurnover());
+            row3.getCell(4).setCellValue(summaryData.getOrderCompletionRate());
+            row3.getCell(6).setCellValue(summaryData.getNewUsers());
+            XSSFRow row4 = sheet.getRow(4);
+            row4.getCell(2).setCellValue(summaryData.getValidOrderCount());
+            row4.getCell(4).setCellValue(summaryData.getUnitPrice());
+
+            // 6. 填充每日明细（利用预加载的Map）
+            for (int i = 0; i < 30; i++) {
+                LocalDate date = startDate.plusDays(i);
+                BusinessDataVO dailyData = dailyDataMap.get(date);
+                XSSFRow row = sheet.getRow(7 + i);
+                // 日期
+                row.getCell(1).setCellValue(date.toString());
+                // 营业额
+                row.getCell(2).setCellValue(dailyData.getTurnover());
+                // 订单总数
+                row.getCell(3).setCellValue(dailyData.getValidOrderCount());
+                // 完成率
+                row.getCell(4).setCellValue(dailyData.getOrderCompletionRate());
+                // 单品平均客单价
+                row.getCell(5).setCellValue(dailyData.getUnitPrice());
+                // 新增用户数
+                row.getCell(6).setCellValue(dailyData.getNewUsers());
+            }
+
+            excel.write(out);
+        } catch (IOException e) {
+            throw new RuntimeException("报表导出失败：" + e.getMessage()); // 异常包装
+        }
+    }
+
+
+// 生成日期列表并校验
     private List<LocalDate> generateDateListAndValidate(LocalDate begin, LocalDate end) {
         Objects.requireNonNull(begin, "开始日期不能为空");
         Objects.requireNonNull(end, "结束日期不能为空");
