@@ -43,6 +43,7 @@ public class ReportServiceImpl implements ReportService {
         Map<LocalDate, Double> turnoverMap = dailyTurnoverDTOS.stream()
                 .collect(Collectors.toMap(DailyTurnoverDTO::getOrderDate, DailyTurnoverDTO::getSum));
 
+        // 使用 fillDataList 填充日营业额
         List<Double> turnoverList = fillDataList(dateList, turnoverMap, 0.0);
 
         return TurnoverReportVO.builder()
