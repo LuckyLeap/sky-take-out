@@ -78,4 +78,34 @@
           AND status = #{status}
         GROUP BY DATE(order_time)
     </select>
+
+    <select id="getDailyStats" resultType="com.sky.dto.DailyStatsDTO">
+        SELECT DATE(order_time)                             AS date,
+               COUNT(id)                                    AS orderCount,
+               SUM(IF(status = 5 AND pay_status = 1, 1, 0)) AS validCount
+        FROM orders
+        WHERE order_time BETWEEN #{begin} AND #{end}
+        GROUP BY DATE(order_time)
+    </select>
+
+    <select id="getTotalStats" resultType="com.sky.dto.TotalStatsDTO">
+        SELECT COUNT(id)                                    AS total,
+               SUM(IF(status = 5 AND pay_status = 1, 1, 0)) AS valid
+        FROM orders
+        WHERE order_time BETWEEN #{begin} AND #{end}
+    </select>
+
+    <select id="getSalesTop10" resultType="com.sky.dto.GoodsSalesDTO">
+        SELECT
+            d.name AS name,
+            SUM(d.number) AS number
+        FROM order_detail d
+                 INNER JOIN orders o ON d.order_id = o.id
+        WHERE o.order_time BETWEEN #{begin} AND #{end}
+          AND o.status = 5
+        GROUP BY d.name
+        ORDER BY number DESC
+        LIMIT 0,10
+    </select>
+
 </mapper>

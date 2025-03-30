@@ -14,7 +14,7 @@
         UNION ALL
         SELECT date + INTERVAL 1 DAY
         FROM date_series
-        WHERE date &lt;= #{end}
+        WHERE date &lt; #{end}
         )
         SELECT
         DATE(date_series.date) AS date,

@@ -1,8 +1,7 @@
 package com.sky.mapper;
 
 import com.github.pagehelper.Page;
-import com.sky.dto.DailyTurnoverDTO;
-import com.sky.dto.OrdersPageQueryDTO;
+import com.sky.dto.*;
 import com.sky.entity.Orders;
 import org.apache.ibatis.annotations.*;
 
@@ -63,5 +62,29 @@ public interface OrderMapper {
             @Param("begin") LocalDateTime begin,
             @Param("end") LocalDateTime end,
             @Param("status") Integer status
+    );
+
+    /**
+     * 订单每日统计
+     */
+    List<DailyStatsDTO> getDailyStats(
+            @Param("begin") LocalDateTime begin,
+            @Param("end") LocalDateTime end
+    );
+
+    /**
+     * 订单总统计
+     */
+    TotalStatsDTO getTotalStats(
+            @Param("begin") LocalDateTime begin,
+            @Param("end") LocalDateTime end
+    );
+
+    /**
+     * 查询销量Top10商品
+     */
+    List<GoodsSalesDTO> getSalesTop10(
+            @Param("begin") LocalDateTime begin,
+            @Param("end") LocalDateTime end
     );
 }
