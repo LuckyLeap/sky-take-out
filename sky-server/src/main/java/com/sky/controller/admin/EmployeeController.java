@@ -1,7 +1,7 @@
 package com.sky.controller.admin;
 
-import com.sky.annotation.CurrentEmpId;
 import com.sky.constant.JwtClaimsConstant;
+import com.sky.context.BaseContext;
 import com.sky.dto.EmployeeDTO;
 import com.sky.dto.EmployeeLoginDTO;
 import com.sky.dto.EmployeePageQueryDTO;
@@ -46,7 +46,6 @@ public class EmployeeController {
     @Operation(summary = "员工登录", description = "实现员工登录功能，并返回JWT令牌")
     public Result<EmployeeLoginVO> login(@RequestBody EmployeeLoginDTO employeeLoginDTO) {
         log.info("员工登录：{}", employeeLoginDTO);
-
         Employee employee = employeeService.login(employeeLoginDTO);
 
         //登录成功后，生成jwt令牌
@@ -73,6 +72,8 @@ public class EmployeeController {
     @PostMapping("/logout")
     @Operation(summary = "员工退出", description = "实现员工退出功能")
     public Result<String> logout() {
+        log.info("退出登录...");
+        BaseContext.removeCurrentId();
         return Result.success();
     }
 
@@ -134,13 +135,17 @@ public class EmployeeController {
     /**
      * 修改密码
      */
-    @PostMapping("/editPassword")
+    @PutMapping("/editPassword")
     @Operation(summary = "修改密码", description = "修改密码")
-    public Result<String> editPassword(
-            @RequestBody PasswordEditDTO passwordEditDTO,
-            @CurrentEmpId Long empId) {  // 自动注入empId
+    public Result<String> editPassword(@RequestBody PasswordEditDTO passwordEditDTO) {
+        // 从 ThreadLocal 获取 empId
+        Long empId = BaseContext.getCurrentId();
+        if (empId == null) {
+            throw new RuntimeException("用户未登录或会话已过期");
+        }
         passwordEditDTO.setEmpId(empId);
-        log.info("修改密码: {}", passwordEditDTO);
+
+        log.info("修改密码：{}", passwordEditDTO);
         employeeService.editPassword(passwordEditDTO);
         return Result.success();
     }

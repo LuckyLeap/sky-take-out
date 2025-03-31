@@ -20,8 +20,12 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @Component
 public class JwtTokenAdminInterceptor implements HandlerInterceptor {
 
+    private final JwtProperties jwtProperties;
+
     @Autowired
-    private JwtProperties jwtProperties;
+    public JwtTokenAdminInterceptor(JwtProperties jwtProperties) {
+        this.jwtProperties = jwtProperties;
+    }
 
     /**
      * 校验jwt
