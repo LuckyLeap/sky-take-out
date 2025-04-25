@@ -28,7 +28,6 @@ public class DishController {
 
     private final DishService dishService;
     private final RedisTemplate<String, Object> redisTemplate;
-
     @Autowired
     public DishController(DishService dishService, RedisTemplate<String, Object> redisTemplate) {
         this.dishService = dishService;
